@@ -13,7 +13,6 @@ import (
 	"net"
 	"os"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -88,7 +87,7 @@ Tests:
 		for serverIndex := range conf.Servers {
 			server := conf.Servers[serverIndex]
 			result.nameserver = server
-			r, rtt, err := localc.Exchange(localm, server+":"+conf.Port)
+			r, rtt, err := localc.Exchange(localm, net.JoinHostPort(server, conf.Port))
 			if r == nil {
 				result.r = nil
 				result.err = err
@@ -142,12 +141,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	c.ReadTimeout = timeout
 	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
 	nsAddressPort := ""
-	if strings.ContainsAny(":", server) {
-		/* IPv6 address */
-		nsAddressPort = "[" + server + "]:53"
-	} else {
-		nsAddressPort = server + ":53"
-	}
+	nsAddressPort = net.JoinHostPort(server, "53")
 	if *debug {
 		fmt.Printf("DEBUG Querying SOA from %s\n", nsAddressPort)
 	}
