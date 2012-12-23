@@ -1,13 +1,8 @@
-/* 
-
-A simple program to have rapidly an idea of the health of a DNS
-zone. It queries each name server of the zone for the SOA record and
-displays the value of the serial number for each server.
-
-Stephane Bortzmeyer <bortzmeyer@nic.fr>
-
-*/
-
+// A simple program to have rapidly an idea of the health of a DNS
+// zone. It queries each name server of the zone for the SOA record and
+// displays the value of the serial number for each server.
+// 
+// Stephane Bortzmeyer <bortzmeyer@nic.fr>
 package main
 
 import (
@@ -18,7 +13,6 @@ import (
 	"net"
 	"os"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -93,7 +87,7 @@ Tests:
 		for serverIndex := range conf.Servers {
 			server := conf.Servers[serverIndex]
 			result.nameserver = server
-			r, rtt, err := localc.Exchange(localm, server+":"+conf.Port)
+			r, rtt, err := localc.Exchange(localm, net.JoinHostPort(server, conf.Port))
 			if r == nil {
 				result.r = nil
 				result.err = err
@@ -147,12 +141,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	c.ReadTimeout = timeout
 	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
 	nsAddressPort := ""
-	if strings.ContainsAny(":", server) {
-		/* IPv6 address */
-		nsAddressPort = "[" + server + "]:53"
-	} else {
-		nsAddressPort = server + ":53"
-	}
+	nsAddressPort = net.JoinHostPort(server, "53")
 	if *debug {
 		fmt.Printf("DEBUG Querying SOA from %s\n", nsAddressPort)
 	}
@@ -358,10 +347,7 @@ func main() {
 		flag.Usage()
 		os.Exit(0)
 	}
-	zone := flag.Arg(0)
-	if zone[len(zone)-1] != '.' {
-		zone += "."
-	}
+	zone := dns.Fqdn(flag.Arg(0))
 	conf, err = dns.ClientConfigFromFile("/etc/resolv.conf")
 	if conf == nil {
 		fmt.Printf("Cannot initialize the local resolver: %s\n", err)
