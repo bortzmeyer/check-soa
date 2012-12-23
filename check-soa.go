@@ -1,13 +1,8 @@
-/* 
-
-A simple program to have rapidly an idea of the health of a DNS
-zone. It queries each name server of the zone for the SOA record and
-displays the value of the serial number for each server.
-
-Stephane Bortzmeyer <bortzmeyer@nic.fr>
-
-*/
-
+// A simple program to have rapidly an idea of the health of a DNS
+// zone. It queries each name server of the zone for the SOA record and
+// displays the value of the serial number for each server.
+// 
+// Stephane Bortzmeyer <bortzmeyer@nic.fr>
 package main
 
 import (
