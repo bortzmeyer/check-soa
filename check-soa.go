@@ -347,10 +347,7 @@ func main() {
 		flag.Usage()
 		os.Exit(0)
 	}
-	zone := flag.Arg(0)
-	if zone[len(zone)-1] != '.' {
-		zone += "."
-	}
+	zone := dns.Fqdn(flag.Arg(0))
 	conf, err = dns.ClientConfigFromFile("/etc/resolv.conf")
 	if conf == nil {
 		fmt.Printf("Cannot initialize the local resolver: %s\n", err)
