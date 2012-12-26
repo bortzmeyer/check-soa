@@ -87,7 +87,7 @@ Tests:
 		for serverIndex := range conf.Servers {
 			server := conf.Servers[serverIndex]
 			result.nameserver = server
-			r, rtt, err := localc.Exchange(localm, net.JoinHostPort(server, conf.Port))
+			r, rtt, err := localc.Exchange(localm, server+":"+conf.Port) // Do not use net.JoinHostPort, see https://github.com/bortzmeyer/check-soa/commit/3e4edb13855d8c4016768796b2892aa83eda1933#commitcomment-2355543
 			if r == nil {
 				result.r = nil
 				result.err = err
@@ -281,6 +281,7 @@ func masterTask(zone string, nameserverRecords []dns.RR) (uint, bool, Results) {
 				errMsg:  append(results[soaResult.name].errMsg, fmt.Sprintf("%s", soaResult.msg)),
 				serial:  append(results[soaResult.name].serial, 0),
 				rtts:    append(results[soaResult.name].rtts, soaResult.rtt)}
+			success = false
 		} else {
 			results[soaResult.name] = nameServer{name: soaResult.name,
 				ips:     append(results[soaResult.name].ips, soaResult.address),
@@ -411,6 +412,7 @@ func main() {
 			}
 		}
 		if len(result.ips) == 0 {
+			success = false
 			fmt.Printf("\t%s\n", result.globalErrMsg)
 		}
 	}
