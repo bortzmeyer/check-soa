@@ -188,7 +188,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	mychan <- result
 }
 
-func masterTask(zone string, nameserverRecords []dns.RR) (uint, bool, Results) {
+func masterTask(zone string, nameserverRecords []dns.RR) (uint, uint, bool, Results) {
 	var (
 		numRequests uint
 	)
@@ -296,7 +296,7 @@ func masterTask(zone string, nameserverRecords []dns.RR) (uint, bool, Results) {
 			results[name] = nameservers[name]
 		}
 	}
-	return numNS, success, results
+	return numNS, numAddrNS, success, results
 }
 
 func main() {
@@ -365,9 +365,19 @@ func main() {
 		fmt.Printf("No such domain %s\n", zone)
 		os.Exit(1)
 	}
-	numNS, success, results := masterTask(zone, nsResult.r.Answer)
+	numNS, numNSaddr, success, results := masterTask(zone, nsResult.r.Answer)
 	if numNS == 0 {
 		fmt.Printf("No NS records for \"%s\". It is probably a domain but not a zone\n", zone)
+		os.Exit(1)
+	}
+	if numNSaddr == 0 {
+		fmt.Printf("No IP addresses for name servers of %s\n", zone)
+		if *v4only {
+			fmt.Printf("May be retry without -4?\n")
+		}
+		if *v6only {
+			fmt.Printf("May be retry without -6?\n")
+		}
 		os.Exit(1)
 	}
 	/* TODO: test if all name servers have the same serial ? */
