@@ -1,7 +1,7 @@
 // A simple program to have rapidly an idea of the health of a DNS
 // zone. It queries each name server of the zone for the SOA record and
 // displays the value of the serial number for each server.
-// 
+//
 // Stephane Bortzmeyer <bortzmeyer@nic.fr>
 package main
 
@@ -25,17 +25,19 @@ const (
 )
 
 var (
-	/* TODO: make it per-thread? It does not seem necessary, the goroutines 
+	/* TODO: make it per-thread? It does not seem necessary, the goroutines
 	do not modify it */
-	conf      *dns.ClientConfig
-	v4only    *bool
-	v6only    *bool
-	debug     *bool
-	quiet     *bool
-	noedns    *bool
-	times     *bool
-	timeout   time.Duration
-	maxTrials *int
+	conf           *dns.ClientConfig
+	v4only         *bool
+	v6only         *bool
+	debug          *bool
+	quiet          *bool
+	noedns         *bool
+	recursion      *bool
+	noauthrequired *bool
+	times          *bool
+	timeout        time.Duration
+	maxTrials      *int
 )
 
 type DNSreply struct {
@@ -76,7 +78,7 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	result.r = nil
 	result.err = errors.New("No name server to answer the question")
 	localm := new(dns.Msg)
-	localm.MsgHdr.RecursionDesired = true
+	localm.RecursionDesired = true
 	localm.Question = make([]dns.Question, 1)
 	localc := new(dns.Client)
 	localc.ReadTimeout = timeout
@@ -136,7 +138,11 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	if !*noedns {
 		m.SetEdns0(EDNSBUFFERSIZE, true)
 	}
-	m.MsgHdr.RecursionDesired = false
+	if *recursion {
+		m.RecursionDesired = true
+	} else {
+		m.RecursionDesired = false
+	}
 	m.Question = make([]dns.Question, 1)
 	c := new(dns.Client)
 	c.ReadTimeout = timeout
@@ -169,7 +175,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 					rsoa := soa.Answer[0]
 					switch rsoa.(type) {
 					case *dns.SOA:
-						if soa.MsgHdr.Authoritative {
+						if *noauthrequired || soa.MsgHdr.Authoritative {
 							result.retrieved = true
 							result.serial = rsoa.(*dns.SOA).Serial
 							result.msg = "OK"
@@ -177,7 +183,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 							result.msg = "Not authoritative"
 						}
 					default:
-						// TODO: a name server can send us other RR types. 
+						// TODO: a name server can send us other RR types.
 						fmt.Printf("Internal error when processing %s\n", rsoa)
 						os.Exit(1)
 					}
@@ -315,6 +321,8 @@ func main() {
 	debug = flag.Bool("d", false, "Debugging")
 	quiet = flag.Bool("q", false, "Quiet mode, display only errors")
 	noedns = flag.Bool("r", false, "Disable EDNS format")
+	recursion = flag.Bool("e", false, "Set recursion on")
+	noauthrequired = flag.Bool("a", false, "Do not require an authoritative answer")
 	times = flag.Bool("i", false, "Display the response time of servers")
 	timeoutI := flag.Float64("t", float64(TIMEOUT), "Timeout in seconds")
 	maxTrials = flag.Int("n", int(MAXTRIALS), "Number of trials before giving in")
