@@ -131,7 +131,8 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	result.address = server
 	result.msg = "UNKNOWN"
 	m := new(dns.Msg)
-	// TODO: allow option DNSSEC DO (to detect firewall or fragmentation problems)
+	// TODO: allow to disable option DNSSEC DO (it is on by
+	// default, to detect firewall or fragmentation problems)
 	if !*noedns {
 		m.SetEdns0(EDNSBUFFERSIZE, true)
 	}
