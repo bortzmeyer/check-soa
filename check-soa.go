@@ -33,6 +33,7 @@ var (
 	debug          *bool
 	quiet          *bool
 	noedns         *bool
+	nodnssec       *bool
 	recursion      *bool
 	noauthrequired *bool
 	times          *bool
@@ -133,10 +134,8 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	result.address = server
 	result.msg = "UNKNOWN"
 	m := new(dns.Msg)
-	// TODO: allow to disable option DNSSEC DO (it is on by
-	// default, to detect firewall or fragmentation problems)
 	if !*noedns {
-		m.SetEdns0(EDNSBUFFERSIZE, true)
+		m.SetEdns0(EDNSBUFFERSIZE, !*nodnssec)
 	}
 	if *recursion {
 		m.RecursionDesired = true
@@ -321,6 +320,9 @@ func main() {
 	debug = flag.Bool("d", false, "Debugging")
 	quiet = flag.Bool("q", false, "Quiet mode, display only errors")
 	noedns = flag.Bool("r", false, "Disable EDNS format")
+	// DNSSEC DO is on by default, to detect firewall or
+	// fragmentation problems.
+	nodnssec = flag.Bool("s", false, "Disable DNSSEC (DO bit)")
 	recursion = flag.Bool("e", false, "Set recursion on")
 	noauthrequired = flag.Bool("a", false, "Do not require an authoritative answer")
 	times = flag.Bool("i", false, "Display the response time of servers")
