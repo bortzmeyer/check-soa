@@ -181,9 +181,12 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 						} else {
 							result.msg = "Not authoritative"
 						}
+					case *dns.CNAME: /* Bad practice but common */
+						fmt.Printf("Apparently not a zone but an alias\n")
+						os.Exit(1)
 					default:
 						// TODO: a name server can send us other RR types.
-						fmt.Printf("Internal error when processing %s\n", rsoa)
+						fmt.Printf("Internal error when processing %s, unexpected record type\n", rsoa)
 						os.Exit(1)
 					}
 					break
