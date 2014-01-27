@@ -79,6 +79,7 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	result.r = nil
 	result.err = errors.New("No name server to answer the question")
 	localm := new(dns.Msg)
+	localm.Id = dns.Id()
 	localm.RecursionDesired = true
 	localm.Question = make([]dns.Question, 1)
 	localc := new(dns.Client)
@@ -137,6 +138,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	if !*noedns {
 		m.SetEdns0(EDNSBUFFERSIZE, !*nodnssec)
 	}
+	m.Id = dns.Id()
 	if *recursion {
 		m.RecursionDesired = true
 	} else {
