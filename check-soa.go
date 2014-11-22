@@ -12,6 +12,7 @@ import (
 	"github.com/miekg/dns"
 	"net"
 	"os"
+	"regexp"
 	"sort"
 	"time"
 )
@@ -22,23 +23,6 @@ const (
 	MAX_NAMESERVERS uint    = 20
 	MAX_ADDRESSES   uint    = 10
 	EDNSBUFFERSIZE  uint16  = 4096
-)
-
-var (
-	/* TODO: make it per-thread? It does not seem necessary, the goroutines
-	do not modify it */
-	conf           *dns.ClientConfig
-	v4only         *bool
-	v6only         *bool
-	debug          *bool
-	quiet          *bool
-	noedns         *bool
-	nodnssec       *bool
-	recursion      *bool
-	noauthrequired *bool
-	times          *bool
-	timeout        time.Duration
-	maxTrials      *int
 )
 
 type DNSreply struct {
@@ -71,6 +55,25 @@ type nameServer struct {
 
 type Results map[string]nameServer
 
+var (
+	/* TODO: make it per-thread? It does not seem necessary, the goroutines
+	do not modify it */
+	conf           *dns.ClientConfig
+	v4only         *bool
+	v6only         *bool
+	debug          *bool
+	quiet          *bool
+	noedns         *bool
+	nodnssec       *bool
+	recursion      *bool
+	noauthrequired *bool
+	times          *bool
+	timeout        time.Duration
+	maxTrials      *int
+	nslist         map[string]nameServer
+	useZoneNS      bool
+)
+
 func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	var result DNSreply
 	var trials uint
@@ -95,6 +98,8 @@ Tests:
 			if r == nil {
 				result.r = nil
 				result.err = err
+				fmt.Printf("DEBUG: error \"%s\" with \"%s\" on \"%s\"\n", err.Error(), qname, server)
+				// TODO dns.Error no longer a net.Error?
 				if err.(net.Error).Timeout() {
 					// Try another resolver
 					break Resolvers
@@ -104,6 +109,7 @@ Tests:
 			} else {
 				result.rtt = rtt
 				if r.Rcode == dns.RcodeSuccess {
+					// TODO: as a result, NODATA (NOERROR/ANSWER=0) are silently ignored (try "foo", for instance, the name exists but no IP address)
 					// TODO: for rcodes like SERVFAIL, trying another resolver could make sense
 					result.r = r
 					result.err = nil
@@ -122,7 +128,7 @@ Tests:
 		}
 	}
 	if *debug {
-		fmt.Printf("DEBUG: end of request %s %d\n", qname, qtype)
+		fmt.Printf("DEBUG: end of DNS request \"%s\" / %d\n", qname, qtype)
 	}
 	mychan <- result
 }
@@ -199,7 +205,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	mychan <- result
 }
 
-func masterTask(zone string, nameserverRecords []dns.RR) (uint, uint, bool, Results) {
+func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, bool, Results) {
 	var (
 		numRequests uint
 	)
@@ -208,22 +214,15 @@ func masterTask(zone string, nameserverRecords []dns.RR) (uint, uint, bool, Resu
 	soaChannel := make(chan SOAreply)
 	numNS := uint(0)
 	numAddrNS := uint(0)
-	nameservers := make(map[string]nameServer)
 	results := make(Results)
-	for i := range nameserverRecords {
-		ans := nameserverRecords[i]
-		switch ans.(type) {
-		case *dns.NS:
-			name := ans.(*dns.NS).Ns
-			nameservers[name] = nameServer{name: name, ips: make([]string, MAX_ADDRESSES)}
-			if !*v6only {
-				go localQuery(addressChannel, name, dns.TypeA)
-			}
-			if !*v4only {
-				go localQuery(addressChannel, name, dns.TypeAAAA)
-			}
-			numNS += 1
+	for name := range nameservers {
+		if !*v6only {
+			go localQuery(addressChannel, name, dns.TypeA)
 		}
+		if !*v4only {
+			go localQuery(addressChannel, name, dns.TypeAAAA)
+		}
+		numNS += 1
 	}
 	if *v6only || *v4only {
 		numRequests = numNS
@@ -312,7 +311,8 @@ func masterTask(zone string, nameserverRecords []dns.RR) (uint, uint, bool, Resu
 
 func main() {
 	var (
-		err error
+		err     error
+		nslists *string
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -333,6 +333,7 @@ func main() {
 	times = flag.Bool("i", false, "Display the response time of servers")
 	timeoutI := flag.Float64("t", float64(TIMEOUT), "Timeout in seconds")
 	maxTrials = flag.Int("n", int(MAXTRIALS), "Number of trials before giving in")
+	nslists = flag.String("ns", "", "Name servers to query")
 	flag.Parse()
 	if *debug && *quiet {
 		fmt.Fprintf(os.Stderr, "debug or quiet but not both\n")
@@ -364,24 +365,45 @@ func main() {
 		flag.Usage()
 		os.Exit(0)
 	}
+	separators, _ := regexp.Compile("\\s+")
+	nslista := separators.Split(*nslists, -1)
+	// If no nameservers option, Split returns the original (empty) string unmolested
+	useZoneNS = len(nslista) == 0 || (len(nslista) == 1 && nslista[0] == "")
+	nslist = make(map[string]nameServer)
+
 	zone := dns.Fqdn(flag.Arg(0))
 	conf, err = dns.ClientConfigFromFile("/etc/resolv.conf")
 	if conf == nil {
 		fmt.Printf("Cannot initialize the local resolver: %s\n", err)
 		os.Exit(1)
 	}
-	nsChan := make(chan DNSreply)
-	go localQuery(nsChan, zone, dns.TypeNS)
-	nsResult := <-nsChan
-	if nsResult.r == nil {
-		fmt.Printf("Cannot retrieve the list of name servers for %s: %s\n", zone, nsResult.err)
-		os.Exit(1)
+
+	if useZoneNS {
+		nsChan := make(chan DNSreply)
+		go localQuery(nsChan, zone, dns.TypeNS)
+		nsResult := <-nsChan
+		if nsResult.r == nil {
+			fmt.Printf("Cannot retrieve the list of name servers for %s: %s\n", zone, nsResult.err)
+			os.Exit(1)
+		}
+		if nsResult.r.Rcode == dns.RcodeNameError {
+			fmt.Printf("No such domain %s\n", zone)
+			os.Exit(1)
+		}
+		for i := range nsResult.r.Answer {
+			ans := nsResult.r.Answer[i]
+			switch ans.(type) {
+			case *dns.NS:
+				name := ans.(*dns.NS).Ns
+				nslist[name] = nameServer{name: name, ips: make([]string, MAX_ADDRESSES)}
+			}
+		}
+	} else {
+		for i := range nslista {
+			nslist[dns.Fqdn(nslista[i])] = nameServer{name: dns.Fqdn(nslista[i]), ips: make([]string, MAX_ADDRESSES)}
+		}
 	}
-	if nsResult.r.Rcode == dns.RcodeNameError {
-		fmt.Printf("No such domain %s\n", zone)
-		os.Exit(1)
-	}
-	numNS, numNSaddr, success, results := masterTask(zone, nsResult.r.Answer)
+	numNS, numNSaddr, success, results := masterTask(zone, nslist)
 	if numNS == 0 {
 		fmt.Printf("No NS records for \"%s\". It is probably a domain but not a zone\n", zone)
 		os.Exit(1)
