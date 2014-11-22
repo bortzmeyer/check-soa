@@ -98,8 +98,6 @@ Tests:
 			if r == nil {
 				result.r = nil
 				result.err = err
-				fmt.Printf("DEBUG: error \"%s\" with \"%s\" on \"%s\"\n", err.Error(), qname, server)
-				// TODO dns.Error no longer a net.Error?
 				if err.(net.Error).Timeout() {
 					// Try another resolver
 					break Resolvers
