@@ -25,7 +25,7 @@ Installation
 It is written in [Go](http://golang.org), so you need a Go compiler 
 installed. Here, we assume you have cgo.
 
-check-soa depends on [GoDNS](http://www.miek.nl/projects/godns/) so 
+check-soa depends on [GoDNS](http://miek.nl/posts/2014/Aug/16/go-dns-package/) so 
 you need to install it:
  
     go get github.com/miekg/dns
