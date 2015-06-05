@@ -94,7 +94,8 @@ Tests:
 		for serverIndex := range conf.Servers {
 			server := conf.Servers[serverIndex]
 			result.nameserver = server
-			r, rtt, err := localc.Exchange(localm, server+":"+conf.Port) // Do not use net.JoinHostPort, see https://github.com/bortzmeyer/check-soa/commit/3e4edb13855d8c4016768796b2892aa83eda1933#commitcomment-2355543
+			// Brackets around the server address are necessary for IPv6 name servers
+			r, rtt, err := localc.Exchange(localm, "["+server+"]:"+conf.Port) // Do not use net.JoinHostPort, see https://github.com/bortzmeyer/check-soa/commit/3e4edb13855d8c4016768796b2892aa83eda1933#commitcomment-2355543
 			if r == nil {
 				result.r = nil
 				result.err = err
