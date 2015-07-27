@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -99,7 +100,7 @@ Tests:
 			if r == nil {
 				result.r = nil
 				result.err = err
-				if err.(net.Error).Timeout() {
+				if strings.Contains(err.Error(), "timeout") {
 					// Try another resolver
 					break Resolvers
 				} else { // We give in
@@ -162,12 +163,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 		soa, rtt, err := c.Exchange(m, nsAddressPort)
 		if soa == nil {
 			result.rtt = 0
-			if !err.(net.Error).Timeout() {
-				result.msg = fmt.Sprintf("%s", err)
-				break
-			} else {
-				result.msg = fmt.Sprintf("Timeout")
-			}
+			result.msg = fmt.Sprintf("%s", err.Error())
 		} else {
 			result.rtt = rtt
 			if soa.Rcode != dns.RcodeSuccess {
