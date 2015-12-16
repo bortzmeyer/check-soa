@@ -11,7 +11,7 @@ zone. It queries each name server of the zone for the SOA record and
 displays the value of the serial number for each server.
 
 It tries to be simple and fast. As a result, it is not a competitor
-for serious DNS checkers like [Zonecheck](http://www.zonecheck.fr/).
+for serious DNS checkers like [ZoneMaster](https://www.zonemaster.fr/).
 
 Usage
 -----
