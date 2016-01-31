@@ -57,12 +57,14 @@ type nameServer struct {
 type Results map[string]nameServer
 
 var (
+	Version = "No Version Provided at compile time"
 	/* TODO: make it per-thread? It does not seem necessary, the goroutines
 	do not modify it */
 	conf           *dns.ClientConfig
 	v4only         *bool
 	v6only         *bool
 	debug          *bool
+	version        *bool
 	quiet          *bool
 	noedns         *bool
 	nodnssec       *bool
@@ -318,6 +320,7 @@ func main() {
 	v6only = flag.Bool("6", false, "Use only IPv6")
 	help := flag.Bool("h", false, "Print help")
 	debug = flag.Bool("d", false, "Debugging")
+	version = flag.Bool("v", false, "Displays version of the code")
 	quiet = flag.Bool("q", false, "Quiet mode, display only errors")
 	noedns = flag.Bool("r", false, "Disable EDNS format")
 	// DNSSEC DO is on by default, to detect firewall or
@@ -330,6 +333,10 @@ func main() {
 	maxTrials = flag.Int("n", int(MAXTRIALS), "Number of trials before giving in")
 	nslists = flag.String("ns", "", "Name servers to query")
 	flag.Parse()
+	if (*version) {
+		fmt.Fprintf(os.Stdout, "%s\n", Version)
+		os.Exit(0)
+	}
 	if *debug && *quiet {
 		fmt.Fprintf(os.Stderr, "debug or quiet but not both\n")
 		flag.Usage()
@@ -359,6 +366,9 @@ func main() {
 	if *help {
 		flag.Usage()
 		os.Exit(0)
+	}
+	if *debug {
+		fmt.Fprintf(os.Stdout, Version)
 	}
 	separators, _ := regexp.Compile("\\s+")
 	nslista := separators.Split(*nslists, -1)

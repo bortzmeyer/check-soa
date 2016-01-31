@@ -32,8 +32,8 @@ you need to install it:
 
 Then, compile:
     
-    go build check-soa.go
-
+    make
+    
 And copy the executable where you want.
 
 Origins
