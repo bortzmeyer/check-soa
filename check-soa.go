@@ -176,25 +176,33 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 					result.msg = "0 answer"
 					break
 				} else {
-					rsoa := soa.Answer[0]
-					switch rsoa.(type) {
-					case *dns.SOA:
-						if *noauthrequired || soa.MsgHdr.Authoritative {
-							result.retrieved = true
-							result.serial = rsoa.(*dns.SOA).Serial
-							result.msg = "OK"
-						} else {
-							result.msg = "Not authoritative"
+					gotSoa := false
+					for _, rsoa := range soa.Answer {
+						switch rsoa.(type) {
+						case *dns.SOA:
+							if *noauthrequired || soa.MsgHdr.Authoritative {
+								result.retrieved = true
+								result.serial = rsoa.(*dns.SOA).Serial
+								result.msg = "OK"
+							} else {
+								result.msg = "Not authoritative"
+							}
+							gotSoa = true
+						case *dns.CNAME: /* Bad practice but common */
+							fmt.Printf("Apparently not a zone but an alias\n")
+							os.Exit(1)
+						case *dns.RRSIG:
+							/* Ignore them. See bug #8 */
+						default:
+							// TODO: a name server can send us other RR types.
+							fmt.Printf("Internal error when processing %s, unexpected record type\n", rsoa)
+							os.Exit(1)
 						}
-					case *dns.CNAME: /* Bad practice but common */
-						fmt.Printf("Apparently not a zone but an alias\n")
-						os.Exit(1)
-					default:
-						// TODO: a name server can send us other RR types.
-						fmt.Printf("Internal error when processing %s, unexpected record type\n", rsoa)
-						os.Exit(1)
+						if !gotSoa {
+							result.msg = "No SOA record in reply"
+						}
+						break
 					}
-					break
 				}
 			}
 		}
@@ -333,7 +341,7 @@ func main() {
 	maxTrials = flag.Int("n", int(MAXTRIALS), "Number of trials before giving in")
 	nslists = flag.String("ns", "", "Name servers to query")
 	flag.Parse()
-	if (*version) {
+	if *version {
 		fmt.Fprintf(os.Stdout, "%s\n", Version)
 		os.Exit(0)
 	}
