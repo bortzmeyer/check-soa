@@ -156,7 +156,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	}
 	m.Question = make([]dns.Question, 1)
 	c := new(dns.Client)
-	c.ReadTimeout = timeout
+	c.ReadTimeout = timeout // Seems ignored for TCP?
 	if *tcp {
 		c.Net = "tcp"
 	}
