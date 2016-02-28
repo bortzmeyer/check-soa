@@ -43,6 +43,7 @@ the excellent book "DNS and BIND" by Liu and Albitz. Unlike the
 original one, my check-soa:
 * queries the name servers in parallel
 * works with IPv4 and IPv6
+* works with TCP
 
 Reference site
 --------------

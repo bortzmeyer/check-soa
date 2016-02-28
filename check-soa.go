@@ -67,6 +67,7 @@ var (
 	version        *bool
 	quiet          *bool
 	noedns         *bool
+	tcp            *bool
 	nodnssec       *bool
 	recursion      *bool
 	noauthrequired *bool
@@ -155,6 +156,9 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	m.Question = make([]dns.Question, 1)
 	c := new(dns.Client)
 	c.ReadTimeout = timeout
+	if *tcp {
+		c.Net = "tcp"
+	}
 	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
 	nsAddressPort := ""
 	nsAddressPort = net.JoinHostPort(server, "53")
@@ -331,6 +335,7 @@ func main() {
 	version = flag.Bool("v", false, "Displays version of the code")
 	quiet = flag.Bool("q", false, "Quiet mode, display only errors")
 	noedns = flag.Bool("r", false, "Disable EDNS format")
+	tcp = flag.Bool("tcp", false, "Use TCP")
 	// DNSSEC DO is on by default, to detect firewall or
 	// fragmentation problems.
 	nodnssec = flag.Bool("s", false, "Disable DNSSEC (DO bit)")
