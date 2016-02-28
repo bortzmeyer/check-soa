@@ -89,6 +89,7 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	localm.Id = dns.Id()
 	localm.RecursionDesired = true
 	localm.Question = make([]dns.Question, 1)
+	localm.SetEdns0(EDNSBUFFERSIZE, false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
 	localc := new(dns.Client)
 	localc.ReadTimeout = timeout
 	localm.Question[0] = dns.Question{qname, qtype, dns.ClassINET}
