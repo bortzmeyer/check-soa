@@ -209,6 +209,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 					}
 				}
 			}
+			break // We got a reply
 		}
 	}
 	mychan <- result
