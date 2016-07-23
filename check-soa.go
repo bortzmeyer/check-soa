@@ -203,11 +203,11 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 							fmt.Printf("Internal error when processing %s, unexpected record type\n", rsoa)
 							os.Exit(1)
 						}
-						if !gotSoa {
-							result.msg = "No SOA record in reply"
-						}
-						break
 					}
+					if !gotSoa {
+						result.msg = "No SOA record in reply"
+					}
+					break
 				}
 			}
 			break // We got a reply
