@@ -67,6 +67,7 @@ var (
 	version        *bool
 	quiet          *bool
 	noedns         *bool
+	bufsize        *int
 	tcp            *bool
 	nodnssec       *bool
 	recursion      *bool
@@ -89,7 +90,7 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	localm.Id = dns.Id()
 	localm.RecursionDesired = true
 	localm.Question = make([]dns.Question, 1)
-	localm.SetEdns0(EDNSBUFFERSIZE, false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
+	localm.SetEdns0(uint16(*bufsize), false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
 	localc := new(dns.Client)
 	localc.ReadTimeout = timeout
 	localm.Question[0] = dns.Question{qname, qtype, dns.ClassINET}
@@ -146,7 +147,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	result.msg = "UNKNOWN"
 	m := new(dns.Msg)
 	if !*noedns {
-		m.SetEdns0(EDNSBUFFERSIZE, !*nodnssec)
+		m.SetEdns0(uint16(*bufsize), !*nodnssec)
 	}
 	m.Id = dns.Id()
 	if *recursion {
@@ -337,6 +338,7 @@ func main() {
 	version = flag.Bool("v", false, "Displays version of the code")
 	quiet = flag.Bool("q", false, "Quiet mode, display only errors")
 	noedns = flag.Bool("r", false, "Disable EDNS format")
+	bufsize = flag.Int("b", int(EDNSBUFFERSIZE), "EDNS buffer size")
 	tcp = flag.Bool("tcp", false, "Use TCP")
 	// DNSSEC DO is on by default, to detect firewall or
 	// fragmentation problems.
