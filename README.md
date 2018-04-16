@@ -45,6 +45,11 @@ original one, my check-soa:
 * works with IPv4 and IPv6
 * works with TCP
 
+Further reading
+---------------
+
+There is a more detailed article about check-soa [on my blog](http://www.bortzmeyer.org/check-soa-go.html).
+
 Reference site
 --------------
 [At Github](https://github.com/bortzmeyer/check-soa)
