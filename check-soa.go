@@ -81,7 +81,7 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 			Id:               dns.Id(),
 			RecursionDesired: true,
 		},
-		Question: []dns.Question{{qname, qtype, dns.ClassINET}},
+		Question: []dns.Question{{Name: qname, Qtype: qtype, Qclass: dns.ClassINET}},
 	}
 
 	localm.SetEdns0(uint16(bufsize), false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
@@ -171,7 +171,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	if tcp {
 		c.Net = "tcp"
 	}
-	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
+	m.Question[0] = dns.Question{Name: zone, Qtype: dns.TypeSOA, Qclass: dns.ClassINET}
 	nsAddressPort := net.JoinHostPort(server, "53")
 	debug("DEBUG Querying SOA from %s\n", nsAddressPort)
 	for trials = 0; trials < uint(maxTrials); trials++ {
