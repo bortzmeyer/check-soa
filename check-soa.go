@@ -355,11 +355,7 @@ var (
 )
 
 func main() {
-	var (
-		err error
-	)
-
-	err = checkCliFlags()
+	err := checkCliFlags()
 	if err == ErrMustExitUsage {
 		flag.Usage()
 		os.Exit(1)
