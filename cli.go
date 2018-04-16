@@ -11,7 +11,7 @@ var (
 	v4only         bool
 	v6only         bool
 	fDebug         bool
-	version        bool
+	fVersion       bool
 	quiet          bool
 	noedns         bool
 	nsid           bool
@@ -36,7 +36,7 @@ func init() {
 	flag.BoolVar(&v4only, "4", false, "Use only IPv4")
 	flag.BoolVar(&v6only, "6", false, "Use only IPv6")
 	flag.BoolVar(&fDebug, "d", false, "Debugging")
-	flag.BoolVar(&version, "v", false, "Displays version of the code")
+	flag.BoolVar(&fVersion, "v", false, "Displays fVersion of the code")
 	flag.BoolVar(&quiet, "q", false, "Quiet mode, display only errors")
 	flag.BoolVar(&noedns, "r", false, "Disable EDNS format")
 	flag.BoolVar(&nsid, "nsid", false, "Enable NSID option")
@@ -55,8 +55,8 @@ func init() {
 }
 
 func checkCliFlags() error {
-	if version {
-		myerror("%s\n", Version)
+	if fVersion {
+		myerror("%s\n", fVersion)
 		return ErrMustExit
 	}
 
