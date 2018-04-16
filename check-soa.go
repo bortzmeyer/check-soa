@@ -75,14 +75,20 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	result.qtype = qtype
 	result.r = nil
 	result.err = errors.New("No name server to answer the question")
-	localm := new(dns.Msg)
-	localm.Id = dns.Id()
-	localm.RecursionDesired = true
-	localm.Question = make([]dns.Question, 1)
+
+	localm := &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Id:               dns.Id(),
+			RecursionDesired: true,
+		},
+		Question: []dns.Question{{qname, qtype, dns.ClassINET}},
+	}
+
 	localm.SetEdns0(uint16(bufsize), false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
+
 	localc := new(dns.Client)
 	localc.ReadTimeout = timeout
-	localm.Question[0] = dns.Question{qname, qtype, dns.ClassINET}
+
 Tests:
 	for trials = 0; trials < uint(maxTrials); trials++ {
 	Resolvers:
@@ -139,13 +145,17 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 		m.SetEdns0(uint16(bufsize), !nodnssec)
 	}
 	if nsid {
-		o := new(dns.OPT)
-		o.Hdr.Name = "." // MUST be the root zone, per definition.
-		o.Hdr.Rrtype = dns.TypeOPT
-		e := new(dns.EDNS0_NSID)
-		e.Code = dns.EDNS0NSID
-		e.Nsid = ""
-		o.Option = append(o.Option, e)
+		e := &dns.EDNS0_NSID{
+			Code: dns.EDNS0NSID,
+			Nsid: "",
+		}
+		o := &dns.OPT{
+			Hdr: dns.RR_Header{
+				Name:   ".",
+				Rrtype: dns.TypeOPT,
+			},
+			Option: []dns.EDNS0{e},
+		}
 		m.Extra = make([]dns.RR, 1)
 		m.Extra[0] = o
 	}
@@ -293,9 +303,7 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 		}
 	}
 	for i := uint(0); i < numAddrNS; i++ {
-		if fDebug {
-			fmt.Printf("DEBUG Getting result for ns #%d/%d\n", i+1, numAddrNS)
-		}
+		debug("DEBUG Getting result for ns #%d/%d\n", i+1, numAddrNS)
 		soaResult := <-soaChannel
 		_, present := results[soaResult.name]
 		fnsid := make([]byte, 0)
