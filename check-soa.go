@@ -164,9 +164,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
 	nsAddressPort := ""
 	nsAddressPort = net.JoinHostPort(server, "53")
-	if fDebug {
-		fmt.Printf("DEBUG Querying SOA from %s\n", nsAddressPort)
-	}
+	debug("DEBUG Querying SOA from %s\n", nsAddressPort)
 	for trials = 0; trials < uint(maxTrials); trials++ {
 		soa, rtt, err := c.Exchange(m, nsAddressPort)
 		if soa == nil {
@@ -344,49 +342,61 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 	return numNS, numAddrNS, success, results
 }
 
-func main() {
-	var (
-		err error
-	)
+var (
+	ErrMustExit      = errors.New("must exit")
+	ErrMustExitUsage = errors.New("must exit with usage")
+)
+
+func checkCliFlags() error {
 	if version {
 		fmt.Fprintf(os.Stdout, "%s\n", Version)
-		os.Exit(0)
+		return ErrMustExit
 	}
+
 	if fDebug && quiet {
 		fmt.Fprintf(os.Stderr, "fDebug or quiet but not both\n")
-		flag.Usage()
-		os.Exit(1)
+		return ErrMustExitUsage
 	}
 	if noedns && nsid {
 		fmt.Fprintf(os.Stderr, "NSID requires EDNS\n")
-		flag.Usage()
-		os.Exit(1)
+		return ErrMustExitUsage
 	}
 	if v4only && v6only {
 		fmt.Fprintf(os.Stderr, "v4-only or v6-only but not both\n")
-		flag.Usage()
-		os.Exit(1)
+		return ErrMustExitUsage
 	}
 	if len(flag.Args()) != 1 {
 		fmt.Fprintf(os.Stderr, "Only one argument expected, %d arguments received\n", len(flag.Args()))
-		flag.Usage()
-		os.Exit(1)
+		return ErrMustExitUsage
 	}
 	if timeoutI <= 0 {
 		fmt.Fprintf(os.Stderr, "Timeout must be positive, not %d\n", timeoutI)
-		flag.Usage()
-		os.Exit(1)
+		return ErrMustExitUsage
 	}
 	timeout = time.Duration(timeoutI * float64(time.Second))
 	if maxTrials <= 0 {
 		fmt.Fprintf(os.Stderr, "Number of trials must be positive, not %d\n", maxTrials)
-		flag.Usage()
-		os.Exit(1)
+		return ErrMustExitUsage
 	}
 	if help {
+		return ErrMustExitUsage
+	}
+	return nil
+}
+
+func main() {
+	var (
+		err error
+	)
+
+	err = checkCliFlags()
+	if err == ErrMustExitUsage {
 		flag.Usage()
+		os.Exit(1)
+	} else if err != nil {
 		os.Exit(0)
 	}
+
 	debug(Version)
 
 	separators, _ := regexp.Compile("\\s+")
