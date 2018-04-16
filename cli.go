@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
 var (
@@ -53,4 +54,41 @@ func init() {
 	flag.IntVar(&maxTrials, "n", int(MAXTRIALS), "Number of trials before giving in")
 	flag.StringVar(&nslists, "ns", "", "Name servers to query")
 	flag.Parse()
+}
+
+func checkCliFlags() error {
+	if version {
+		myerror("%s\n", Version)
+		return ErrMustExit
+	}
+
+	if fDebug && quiet {
+		myerror("fDebug or quiet but not both\n")
+		return ErrMustExitUsage
+	}
+	if noedns && nsid {
+		myerror("NSID requires EDNS\n")
+		return ErrMustExitUsage
+	}
+	if v4only && v6only {
+		myerror("v4-only or v6-only but not both\n")
+		return ErrMustExitUsage
+	}
+	if len(flag.Args()) != 1 {
+		myerror("Only one argument expected, %d arguments received\n", len(flag.Args()))
+		return ErrMustExitUsage
+	}
+	if timeoutI <= 0 {
+		myerror("Timeout must be positive, not %d\n", timeoutI)
+		return ErrMustExitUsage
+	}
+	timeout = time.Duration(timeoutI * float64(time.Second))
+	if maxTrials <= 0 {
+		myerror("Number of trials must be positive, not %d\n", maxTrials)
+		return ErrMustExitUsage
+	}
+	if help {
+		return ErrMustExitUsage
+	}
+	return nil
 }

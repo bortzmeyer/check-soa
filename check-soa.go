@@ -215,13 +215,13 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 							}
 							gotSoa = true
 						case *dns.CNAME: /* Bad practice but common */
-							fmt.Printf("Apparently not a zone but an alias\n")
+							myerror("Apparently not a zone but an alias\n")
 							os.Exit(1)
 						case *dns.RRSIG:
 							/* Ignore them. See bug #8 */
 						default:
 							// TODO: a name server can send us other RR types.
-							fmt.Printf("Internal error when processing %s, unexpected record type\n", rsoa)
+							myerror("Internal myerror when processing %s, unexpected record type\n", rsoa)
 							os.Exit(1)
 						}
 					}
@@ -355,43 +355,6 @@ var (
 	ErrMustExitUsage = errors.New("must exit with usage")
 )
 
-func checkCliFlags() error {
-	if version {
-		fmt.Fprintf(os.Stdout, "%s\n", Version)
-		return ErrMustExit
-	}
-
-	if fDebug && quiet {
-		fmt.Fprintf(os.Stderr, "fDebug or quiet but not both\n")
-		return ErrMustExitUsage
-	}
-	if noedns && nsid {
-		fmt.Fprintf(os.Stderr, "NSID requires EDNS\n")
-		return ErrMustExitUsage
-	}
-	if v4only && v6only {
-		fmt.Fprintf(os.Stderr, "v4-only or v6-only but not both\n")
-		return ErrMustExitUsage
-	}
-	if len(flag.Args()) != 1 {
-		fmt.Fprintf(os.Stderr, "Only one argument expected, %d arguments received\n", len(flag.Args()))
-		return ErrMustExitUsage
-	}
-	if timeoutI <= 0 {
-		fmt.Fprintf(os.Stderr, "Timeout must be positive, not %d\n", timeoutI)
-		return ErrMustExitUsage
-	}
-	timeout = time.Duration(timeoutI * float64(time.Second))
-	if maxTrials <= 0 {
-		fmt.Fprintf(os.Stderr, "Number of trials must be positive, not %d\n", maxTrials)
-		return ErrMustExitUsage
-	}
-	if help {
-		return ErrMustExitUsage
-	}
-	return nil
-}
-
 func main() {
 	var (
 		err error
@@ -416,7 +379,7 @@ func main() {
 	zone := dns.Fqdn(flag.Arg(0))
 	conf, err = dns.ClientConfigFromFile("/etc/resolv.conf")
 	if conf == nil {
-		fmt.Printf("Cannot initialize the local resolver: %s\n", err)
+		myerror("Cannot initialize the local resolver: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -425,11 +388,11 @@ func main() {
 		go localQuery(nsChan, zone, dns.TypeNS)
 		nsResult := <-nsChan
 		if nsResult.r == nil {
-			fmt.Printf("Cannot retrieve the list of name servers for %s: %s\n", zone, nsResult.err)
+			myerror("Cannot retrieve the list of name servers for %s: %s\n", zone, nsResult.err)
 			os.Exit(1)
 		}
 		if nsResult.r.Rcode == dns.RcodeNameError {
-			fmt.Printf("No such domain %s\n", zone)
+			myerror("No such domain %s\n", zone)
 			os.Exit(1)
 		}
 		for i := range nsResult.r.Answer {
@@ -447,7 +410,7 @@ func main() {
 	}
 	numNS, numNSaddr, success, results := masterTask(zone, nslist)
 	if numNS == 0 {
-		fmt.Printf("No NS records for \"%s\". It is probably a domain but not a zone\n", zone)
+		myerror("No NS records for \"%s\". It is probably a domain but not a zone\n", zone)
 		os.Exit(1)
 	}
 	if numNSaddr == 0 {
@@ -506,7 +469,7 @@ func main() {
 		}
 		if len(result.ips) == 0 {
 			success = false
-			fmt.Printf("\t%s\n", result.globalErrMsg)
+			myerror("\t%s\n", result.globalErrMsg)
 		}
 	}
 	if success {

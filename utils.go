@@ -1,6 +1,10 @@
 package main
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"os"
+)
 
 // fDebug displays only if fDebug is set
 func debug(str string, a ...interface{}) {
@@ -14,4 +18,9 @@ func verbose(str string, a ...interface{}) {
 	if !quiet {
 		log.Printf(str, a...)
 	}
+}
+
+// Display an myerror on… Stderr
+func myerror(str string, a ...interface{}) {
+	fmt.Fprintf(os.Stderr, str, a...)
 }
