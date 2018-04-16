@@ -63,24 +63,9 @@ var (
 	Version = "No Version Provided at compile time"
 	/* TODO: make it per-thread? It does not seem necessary, the goroutines
 	do not modify it */
-	conf           *dns.ClientConfig
-	v4only         *bool
-	v6only         *bool
-	debug          *bool
-	version        *bool
-	quiet          *bool
-	noedns         *bool
-	nsid           *bool
-	bufsize        *int
-	tcp            *bool
-	nodnssec       *bool
-	recursion      *bool
-	noauthrequired *bool
-	times          *bool
-	timeout        time.Duration
-	maxTrials      *int
-	nslist         map[string]nameServer
-	useZoneNS      bool
+	conf      *dns.ClientConfig
+	timeout   time.Duration
+	useZoneNS bool
 )
 
 func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
@@ -94,12 +79,12 @@ func localQuery(mychan chan DNSreply, qname string, qtype uint16) {
 	localm.Id = dns.Id()
 	localm.RecursionDesired = true
 	localm.Question = make([]dns.Question, 1)
-	localm.SetEdns0(uint16(*bufsize), false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
+	localm.SetEdns0(uint16(bufsize), false) // Even if no EDNS requested, see #9 May be we should retry without it if timeout?
 	localc := new(dns.Client)
 	localc.ReadTimeout = timeout
 	localm.Question[0] = dns.Question{qname, qtype, dns.ClassINET}
 Tests:
-	for trials = 0; trials < uint(*maxTrials); trials++ {
+	for trials = 0; trials < uint(maxTrials); trials++ {
 	Resolvers:
 		for serverIndex := range conf.Servers {
 			server := conf.Servers[serverIndex]
@@ -136,7 +121,7 @@ Tests:
 			}
 		}
 	}
-	if *debug {
+	if fDebug {
 		fmt.Printf("DEBUG: end of DNS request \"%s\" / %d\n", qname, qtype)
 	}
 	mychan <- result
@@ -150,10 +135,10 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	result.address = server
 	result.msg = "UNKNOWN"
 	m := new(dns.Msg)
-	if !*noedns {
-		m.SetEdns0(uint16(*bufsize), !*nodnssec)
+	if !noedns {
+		m.SetEdns0(uint16(bufsize), !nodnssec)
 	}
-	if *nsid {
+	if nsid {
 		o := new(dns.OPT)
 		o.Hdr.Name = "." // MUST be the root zone, per definition.
 		o.Hdr.Rrtype = dns.TypeOPT
@@ -165,7 +150,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 		m.Extra[0] = o
 	}
 	m.Id = dns.Id()
-	if *recursion {
+	if recursion {
 		m.RecursionDesired = true
 	} else {
 		m.RecursionDesired = false
@@ -173,23 +158,23 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	m.Question = make([]dns.Question, 1)
 	c := new(dns.Client)
 	c.ReadTimeout = timeout // Seems ignored for TCP?
-	if *tcp {
+	if tcp {
 		c.Net = "tcp"
 	}
 	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
 	nsAddressPort := ""
 	nsAddressPort = net.JoinHostPort(server, "53")
-	if *debug {
+	if fDebug {
 		fmt.Printf("DEBUG Querying SOA from %s\n", nsAddressPort)
 	}
-	for trials = 0; trials < uint(*maxTrials); trials++ {
+	for trials = 0; trials < uint(maxTrials); trials++ {
 		soa, rtt, err := c.Exchange(m, nsAddressPort)
 		if soa == nil {
 			result.rtt = 0
 			result.msg = fmt.Sprintf("%s", err.Error())
 		} else {
 			result.rtt = rtt
-			if *nsid {
+			if nsid {
 				for n := range soa.Extra {
 					if soa.Extra[n].Header().Rrtype == dns.TypeOPT {
 						for m := range soa.Extra[n].(*dns.OPT).Option {
@@ -213,7 +198,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 					for _, rsoa := range soa.Answer {
 						switch rsoa.(type) {
 						case *dns.SOA:
-							if *noauthrequired || soa.MsgHdr.Authoritative {
+							if noauthrequired || soa.MsgHdr.Authoritative {
 								result.retrieved = true
 								result.serial = rsoa.(*dns.SOA).Serial
 								result.msg = "OK"
@@ -255,15 +240,15 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 	numAddrNS := uint(0)
 	results := make(Results)
 	for name := range nameservers {
-		if !*v6only {
+		if !v6only {
 			go localQuery(addressChannel, name, dns.TypeA)
 		}
-		if !*v4only {
+		if !v4only {
 			go localQuery(addressChannel, name, dns.TypeAAAA)
 		}
-		numNS += 1
+		numNS++
 	}
-	if *v6only || *v4only {
+	if v6only || v4only {
 		numRequests = numNS
 	} else {
 		numRequests = numNS * 2
@@ -310,13 +295,13 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 		}
 	}
 	for i := uint(0); i < numAddrNS; i++ {
-		if *debug {
+		if fDebug {
 			fmt.Printf("DEBUG Getting result for ns #%d/%d\n", i+1, numAddrNS)
 		}
 		soaResult := <-soaChannel
 		_, present := results[soaResult.name]
 		fnsid := make([]byte, 0)
-		if *nsid {
+		if nsid {
 			fnsid = make([]byte, hex.DecodedLen(len(soaResult.nsid)))
 			n, err := hex.Decode(fnsid, []byte(soaResult.nsid))
 			if err != nil || n != hex.DecodedLen(len(soaResult.nsid)) {
@@ -361,49 +346,23 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 
 func main() {
 	var (
-		err     error
-		nslists *string
+		err error
 	)
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "%s [options] ZONE\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-	v4only = flag.Bool("4", false, "Use only IPv4")
-	v6only = flag.Bool("6", false, "Use only IPv6")
-	help := flag.Bool("h", false, "Print help")
-	debug = flag.Bool("d", false, "Debugging")
-	version = flag.Bool("v", false, "Displays version of the code")
-	quiet = flag.Bool("q", false, "Quiet mode, display only errors")
-	noedns = flag.Bool("r", false, "Disable EDNS format")
-	nsid = flag.Bool("nsid", false, "Enable NSID option")
-	bufsize = flag.Int("b", int(EDNSBUFFERSIZE), "EDNS buffer size")
-	tcp = flag.Bool("tcp", false, "Use TCP")
-	// DNSSEC DO is on by default, to detect firewall or
-	// fragmentation problems.
-	nodnssec = flag.Bool("s", false, "Disable DNSSEC (DO bit)")
-	recursion = flag.Bool("e", false, "Set recursion on")
-	noauthrequired = flag.Bool("a", false, "Do not require an authoritative answer")
-	times = flag.Bool("i", false, "Display the response time of servers")
-	timeoutI := flag.Float64("t", float64(TIMEOUT), "Timeout in seconds")
-	maxTrials = flag.Int("n", int(MAXTRIALS), "Number of trials before giving in")
-	nslists = flag.String("ns", "", "Name servers to query")
-	flag.Parse()
-	if *version {
+	if version {
 		fmt.Fprintf(os.Stdout, "%s\n", Version)
 		os.Exit(0)
 	}
-	if *debug && *quiet {
-		fmt.Fprintf(os.Stderr, "debug or quiet but not both\n")
+	if fDebug && quiet {
+		fmt.Fprintf(os.Stderr, "fDebug or quiet but not both\n")
 		flag.Usage()
 		os.Exit(1)
 	}
-	if *noedns && *nsid {
+	if noedns && nsid {
 		fmt.Fprintf(os.Stderr, "NSID requires EDNS\n")
 		flag.Usage()
 		os.Exit(1)
 	}
-	if *v4only && *v6only {
+	if v4only && v6only {
 		fmt.Fprintf(os.Stderr, "v4-only or v6-only but not both\n")
 		flag.Usage()
 		os.Exit(1)
@@ -413,26 +372,25 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if *timeoutI <= 0 {
-		fmt.Fprintf(os.Stderr, "Timeout must be positive, not %d\n", *timeoutI)
+	if timeoutI <= 0 {
+		fmt.Fprintf(os.Stderr, "Timeout must be positive, not %d\n", timeoutI)
 		flag.Usage()
 		os.Exit(1)
 	}
-	timeout = time.Duration(*timeoutI * float64(time.Second))
-	if *maxTrials <= 0 {
-		fmt.Fprintf(os.Stderr, "Number of trials must be positive, not %d\n", *maxTrials)
+	timeout = time.Duration(timeoutI * float64(time.Second))
+	if maxTrials <= 0 {
+		fmt.Fprintf(os.Stderr, "Number of trials must be positive, not %d\n", maxTrials)
 		flag.Usage()
 		os.Exit(1)
 	}
-	if *help {
+	if help {
 		flag.Usage()
 		os.Exit(0)
 	}
-	if *debug {
-		fmt.Fprintf(os.Stdout, Version)
-	}
+	debug(Version)
+
 	separators, _ := regexp.Compile("\\s+")
-	nslista := separators.Split(*nslists, -1)
+	nslista := separators.Split(nslists, -1)
 	// If no nameservers option, Split returns the original (empty) string unmolested
 	useZoneNS = len(nslista) == 0 || (len(nslista) == 1 && nslista[0] == "")
 	nslist = make(map[string]nameServer)
@@ -476,10 +434,10 @@ func main() {
 	}
 	if numNSaddr == 0 {
 		fmt.Printf("No IP addresses for name servers of %s\n", zone)
-		if *v4only {
+		if v4only {
 			fmt.Printf("May be retry without -4?\n")
 		}
-		if *v6only {
+		if v6only {
 			fmt.Printf("May be retry without -6?\n")
 		}
 		os.Exit(1)
@@ -506,7 +464,7 @@ func main() {
 				break
 			}
 		}
-		if !*quiet || !serverOK {
+		if !quiet || !serverOK {
 			fmt.Printf("%s\n", keys[k])
 		}
 		for i := 0; i < len(result.ips); i++ {
@@ -518,13 +476,13 @@ func main() {
 			} else {
 				msg = result.errMsg[i]
 			}
-			if *times && result.rtts[i] != 0 {
+			if times && result.rtts[i] != 0 {
 				msg = msg + fmt.Sprintf(" (%d ms)", int(float64(result.rtts[i])/1e6))
 			}
-			if *nsid && result.fnsid[i] != "" {
+			if nsid && result.fnsid[i] != "" {
 				msg = msg + fmt.Sprintf(" (NSID %s)", result.fnsid[i])
 			}
-			if !*quiet || !result.success[i] {
+			if !quiet || !result.success[i] {
 				fmt.Printf("\t%s: %s: %s\n", result.ips[i], code, msg)
 			}
 		}
