@@ -425,7 +425,7 @@ func main() {
 	/* TODO: test if all name servers have the same serial ? */
 	keys := make([]string, len(results))
 	i := 0
-	for k, _ := range results {
+	for k := range results {
 		keys[i] = k
 		i++
 	}
