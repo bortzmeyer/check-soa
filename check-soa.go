@@ -20,11 +20,11 @@ import (
 )
 
 const (
-	TIMEOUT         float64 = float64(1.5)
-	MAXTRIALS       uint    = 3
-	MAX_NAMESERVERS uint    = 20
-	MAX_ADDRESSES   uint    = 10
-	EDNSBUFFERSIZE  uint16  = 4096
+	TIMEOUT                = float64(1.5)
+	MAXTRIALS       uint   = 3
+	MAX_NAMESERVERS uint   = 20
+	MAX_ADDRESSES   uint   = 10
+	EDNSBUFFERSIZE  uint16 = 4096
 )
 
 type DNSreply struct {
