@@ -27,6 +27,7 @@ const (
 	EDNSBUFFERSIZE  uint16 = 4096
 )
 
+// DNSReply is the full answer
 type DNSreply struct {
 	qname      string
 	qtype      uint16
@@ -36,6 +37,7 @@ type DNSreply struct {
 	rtt        time.Duration
 }
 
+// SOAReply is what we need.
 type SOAreply struct {
 	name      string
 	address   string
@@ -57,10 +59,14 @@ type nameServer struct {
 	rtts         []time.Duration
 }
 
+// Results for each nameserver
 type Results map[string]nameServer
 
+const (
+	version = "No version Provided at compile time"
+)
+
 var (
-	Version = "No Version Provided at compile time"
 	/* TODO: make it per-thread? It does not seem necessary, the goroutines
 	do not modify it */
 	conf      *dns.ClientConfig
@@ -350,7 +356,9 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 }
 
 var (
-	ErrMustExit      = errors.New("must exit")
+	// ErrMustExit is exit without usage, code = 0
+	ErrMustExit = errors.New("must exit")
+	// ErrMustExitUsage is when usage should be displayed, code = 1
 	ErrMustExitUsage = errors.New("must exit with usage")
 )
 
@@ -363,7 +371,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	debug(Version)
+	debug("%s", version)
 
 	separators, _ := regexp.Compile(`\s+`)
 	nslista := separators.Split(nslists, -1)
