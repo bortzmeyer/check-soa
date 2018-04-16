@@ -365,7 +365,7 @@ func main() {
 
 	debug(Version)
 
-	separators, _ := regexp.Compile("\\s+")
+	separators, _ := regexp.Compile(`\s+`)
 	nslista := separators.Split(nslists, -1)
 	// If no nameservers option, Split returns the original (empty) string unmolested
 	useZoneNS = len(nslista) == 0 || (len(nslista) == 1 && nslista[0] == "")
