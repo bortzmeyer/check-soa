@@ -289,12 +289,12 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 					case *dns.A:
 						ns = ansa.(*dns.A).A.String()
 						nameservers[addrResult.qname] = nameServer{name: addrResult.qname, ips: append(nameservers[addrResult.qname].ips, ns)}
-						numAddrNS += 1
+						numAddrNS++
 						go soaQuery(soaChannel, zone, addrResult.qname, ns)
 					case *dns.AAAA:
 						ns = ansa.(*dns.AAAA).AAAA.String()
 						nameservers[addrResult.qname] = nameServer{name: addrResult.qname, ips: append(nameservers[addrResult.qname].ips, ns)}
-						numAddrNS += 1
+						numAddrNS++
 						go soaQuery(soaChannel, zone, addrResult.qname, ns)
 					}
 				}
