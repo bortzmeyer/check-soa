@@ -172,8 +172,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 		c.Net = "tcp"
 	}
 	m.Question[0] = dns.Question{zone, dns.TypeSOA, dns.ClassINET}
-	nsAddressPort := ""
-	nsAddressPort = net.JoinHostPort(server, "53")
+	nsAddressPort := net.JoinHostPort(server, "53")
 	debug("DEBUG Querying SOA from %s\n", nsAddressPort)
 	for trials = 0; trials < uint(maxTrials); trials++ {
 		soa, rtt, err := c.Exchange(m, nsAddressPort)
@@ -449,8 +448,9 @@ func main() {
 			fmt.Printf("%s\n", keys[k])
 		}
 		for i := 0; i < len(result.ips); i++ {
+			var msg string
+
 			code := "ERROR"
-			msg := ""
 			if result.success[i] {
 				code = "OK"
 				msg = fmt.Sprintf("%d", result.serial[i])
