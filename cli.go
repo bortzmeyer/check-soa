@@ -48,7 +48,7 @@ func init() {
 	flag.BoolVar(&recursion, "e", false, "Set recursion on")
 	flag.BoolVar(&noauthrequired, "a", false, "Do not require an authoritative answer")
 	flag.BoolVar(&times, "i", false, "Display the response time of servers")
-	flag.Float64Var(&timeoutI, "t", float64(TIMEOUT), "Timeout in seconds")
+	flag.Float64Var(&timeoutI, "t", TIMEOUT, "Timeout in seconds")
 	flag.IntVar(&maxTrials, "n", int(MAXTRIALS), "Number of trials before giving in")
 	flag.StringVar(&nslists, "ns", "", "Name servers to query")
 	flag.Parse()
