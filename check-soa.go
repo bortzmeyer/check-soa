@@ -178,7 +178,7 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 		soa, rtt, err := c.Exchange(m, nsAddressPort)
 		if soa == nil {
 			result.rtt = 0
-			result.msg = fmt.Sprintf("%s", err.Error())
+			result.msg = err.Error()
 		} else {
 			result.rtt = rtt
 			if nsid {
@@ -326,7 +326,7 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 			results[soaResult.name] = nameServer{name: soaResult.name,
 				ips:     append(results[soaResult.name].ips, soaResult.address),
 				success: append(results[soaResult.name].success, false),
-				errMsg:  append(results[soaResult.name].errMsg, fmt.Sprintf("%s", soaResult.msg)),
+				errMsg:  append(results[soaResult.name].errMsg, soaResult.msg),
 				serial:  append(results[soaResult.name].serial, 0),
 				rtts:    append(results[soaResult.name].rtts, soaResult.rtt),
 				fnsid:   append(results[soaResult.name].fnsid, string(fnsid))}
