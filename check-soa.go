@@ -142,14 +142,24 @@ Tests:
 func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 	var result SOAreply
 	var trials uint
+
 	result.retrieved = false
 	result.name = name
 	result.address = server
 	result.msg = "UNKNOWN"
-	m := new(dns.Msg)
+
+	m := &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Id:               dns.Id(),
+			RecursionDesired: recursion,
+		},
+		Question: []dns.Question{{Name: zone, Qtype: dns.TypeSOA, Qclass: dns.ClassINET}},
+	}
+
 	if !noedns {
 		m.SetEdns0(uint16(bufsize), !nodnssec)
 	}
+
 	if nsid {
 		e := &dns.EDNS0_NSID{
 			Code: dns.EDNS0NSID,
@@ -162,22 +172,14 @@ func soaQuery(mychan chan SOAreply, zone string, name string, server string) {
 			},
 			Option: []dns.EDNS0{e},
 		}
-		m.Extra = make([]dns.RR, 1)
-		m.Extra[0] = o
+		m.Extra = []dns.RR{o}
 	}
-	m.Id = dns.Id()
-	if recursion {
-		m.RecursionDesired = true
-	} else {
-		m.RecursionDesired = false
-	}
-	m.Question = make([]dns.Question, 1)
+
 	c := new(dns.Client)
 	c.ReadTimeout = timeout // Seems ignored for TCP?
 	if tcp {
 		c.Net = "tcp"
 	}
-	m.Question[0] = dns.Question{Name: zone, Qtype: dns.TypeSOA, Qclass: dns.ClassINET}
 	nsAddressPort := net.JoinHostPort(server, "53")
 	debug("DEBUG Querying SOA from %s\n", nsAddressPort)
 	for trials = 0; trials < uint(maxTrials); trials++ {
