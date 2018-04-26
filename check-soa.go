@@ -62,10 +62,6 @@ type nameServer struct {
 // Results for each nameserver
 type Results map[string]nameServer
 
-const (
-	version = "No version Provided at compile time"
-)
-
 var (
 	/* TODO: make it per-thread? It does not seem necessary, the goroutines
 	do not modify it */
@@ -133,9 +129,7 @@ Tests:
 			}
 		}
 	}
-	if fDebug {
-		fmt.Printf("DEBUG: end of DNS request \"%s\" / %d\n", qname, qtype)
-	}
+	debug("DEBUG end of DNS request \"%s\" / %d\n", qname, qtype)
 	mychan <- result
 }
 
@@ -310,8 +304,8 @@ func masterTask(zone string, nameservers map[string]nameServer) (uint, uint, boo
 		}
 	}
 	for i := uint(0); i < numAddrNS; i++ {
-		debug("DEBUG Getting result for ns #%d/%d\n", i+1, numAddrNS)
 		soaResult := <-soaChannel
+		debug("DEBUG Getting result for ns #%d/%d (%s)\n", i+1, numAddrNS, soaResult.name)
 		_, present := results[soaResult.name]
 		fnsid := make([]byte, 0)
 		if nsid {
@@ -373,7 +367,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	debug("%s", version)
+	debug("%s", lVersion)
 
 	separators, _ := regexp.Compile(`\s+`)
 	nslista := separators.Split(nslists, -1)

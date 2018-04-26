@@ -7,12 +7,16 @@ import (
 	"time"
 )
 
+const (
+	version = "No version provided at compile time"
+)
+
 var (
 	v4only         bool
 	v6only         bool
 	fDebug         bool
 	fVersion       bool
-	Version        string
+	lVersion       string = version
 	quiet          bool
 	noedns         bool
 	nsid           bool
@@ -49,7 +53,7 @@ func init() {
 	flag.BoolVar(&recursion, "e", false, "Set recursion on")
 	flag.BoolVar(&noauthrequired, "a", false, "Do not require an authoritative answer")
 	flag.BoolVar(&times, "i", false, "Display the response time of servers")
-	flag.Float64Var(&timeoutI, "t", TIMEOUT, "Timeout in seconds")
+	flag.Float64Var(&timeoutI, "t", TIMEOUT, "Timeout in seconds (for one trial)")
 	flag.IntVar(&maxTrials, "n", int(MAXTRIALS), "Number of trials before giving in")
 	flag.StringVar(&nslists, "ns", "", "Name servers to query")
 	flag.Parse()
@@ -57,7 +61,7 @@ func init() {
 
 func checkCliFlags() error {
 	if fVersion {
-		myerror("%s\n", Version)
+		myerror("%s\n", lVersion)
 		return ErrMustExit
 	}
 
