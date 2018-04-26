@@ -403,8 +403,19 @@ func main() {
 			}
 		}
 	} else {
-		for i := range nslista {
-			nslist[dns.Fqdn(nslista[i])] = nameServer{name: dns.Fqdn(nslista[i]), ips: make([]string, MAX_ADDRESSES)}
+		for _, ns := range nslista {
+			// Do we have an IP?
+			if ip := net.ParseIP(ns); ip != nil {
+				// Get PTR RR
+				fqdn, err := dns.ReverseAddr(ns)
+				if err != nil {
+					myerror("No reverse for %s: %v", ns, err)
+					continue
+				}
+				nslist[fqdn] = nameServer{name: fqdn, ips: make([]string, MAX_ADDRESSES)}
+			} else {
+				nslist[dns.Fqdn(ns)] = nameServer{name: dns.Fqdn(ns), ips: make([]string, MAX_ADDRESSES)}
+			}
 		}
 	}
 	numNS, numNSaddr, success, results := masterTask(zone, nslist)
