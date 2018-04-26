@@ -55,7 +55,7 @@ func init() {
 	flag.BoolVar(&times, "i", false, "Display the response time of servers")
 	flag.Float64Var(&timeoutI, "t", TIMEOUT, "Timeout in seconds (for one trial)")
 	flag.IntVar(&maxTrials, "n", int(MAXTRIALS), "Number of trials before giving in")
-	flag.StringVar(&nslists, "ns", "", "Name servers to query")
+	flag.StringVar(&nslists, "ns", "", "Name servers to query (space-separated)")
 	flag.Parse()
 }
 
