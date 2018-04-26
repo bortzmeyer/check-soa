@@ -13,7 +13,6 @@ import (
 	"github.com/miekg/dns"
 	"net"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -369,8 +368,7 @@ func main() {
 
 	debug("%s", lVersion)
 
-	separators, _ := regexp.Compile(`\s+`)
-	nslista := separators.Split(nslists, -1)
+	nslista := strings.Fields(nslists)
 	// If no nameservers option, Split returns the original (empty) string unmolested
 	useZoneNS = len(nslista) == 0 || (len(nslista) == 1 && nslista[0] == "")
 	nslist = make(map[string]nameServer)
