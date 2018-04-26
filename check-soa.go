@@ -407,12 +407,14 @@ func main() {
 			// Do we have an IP?
 			if ip := net.ParseIP(ns); ip != nil {
 				// Get PTR RR
-				fqdn, err := dns.ReverseAddr(ns)
+				debug("found IP: %s", ns)
+				fqdn, err := getPTR(ns)
 				if err != nil {
-					myerror("No reverse for %s: %v", ns, err)
+					myerror("No reverse for %s: %v\n", ns, err)
 					continue
 				}
-				nslist[fqdn] = nameServer{name: fqdn, ips: make([]string, MAX_ADDRESSES)}
+				debug("fqdn=%v", fqdn)
+				nslist[fqdn[0]] = nameServer{name: fqdn[0], ips: make([]string, MAX_ADDRESSES)}
 			} else {
 				nslist[dns.Fqdn(ns)] = nameServer{name: dns.Fqdn(ns), ips: make([]string, MAX_ADDRESSES)}
 			}
